@@ -19,3 +19,8 @@ var/
 
 # Serverless directories
 .serverless
+
+# Vim
+*.swp
+
+
