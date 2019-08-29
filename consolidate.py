@@ -40,26 +40,44 @@ def getBucketParts(bucket):
 	if not retval["prefix"]:
 		retval["prefix"] = ""
 
+	#
+	# Remove any trailing slashes
+	#
+	if retval["prefix"][len(retval["prefix"]) - 1] == "/":
+		retval["prefix"] = retval["prefix"][:-1]
+
 	return(retval)
 
 
 #
-# Remove the leading prefix from the source filename
+# Split the source file into any prefix after the main prefix and the filename
 #
-def getSourceFilenameFromPrefix(prefix, file):
+# That is, if the prefix is "foo" and the full path to the file is "foo/bar/baz",
+# we'll get "bar" as the prefix and "baz" as the filename.
+#
+def getSourceFilenamePartsFromPrefix(prefix, file):
 
-	retval = ""
+	retval = ()
 
-	results = re.search("^" + prefix + "(.*)", file)
+	results = re.search("^" + prefix + "(.*/)?(.*)", file)
+
+	prefix2 = results.group(1)
+	file = results.group(2)
 
 	#
-	# Remove any leading slashes.
+	# Remove any leading and trailing slashes
 	#
-	retval = results.group(1)
-	if retval[0] == "/":
-		retval = retval[1:]
+	if prefix2[0] == "/":
+		prefix2 = prefix2[1:]
 
-	return(retval)
+	#
+	# Remove any trailing slashes
+	#
+	if prefix2:
+		if prefix2[len(prefix2) - 1] == "/":
+			prefix2 = prefix2[:-1]
+
+	return(prefix2, file)
 
 
 #
@@ -108,9 +126,36 @@ def go(event, context):
 	s3 = boto3.resource('s3')
 	bucket = s3.Bucket(source_parts["bucket"])
 	
+	rollup_files = {}
+
 	for obj in bucket.objects.filter(Prefix = source_parts["prefix"]):
-		file = getSourceFilenameFromPrefix(source_parts["prefix"], obj.key)
+		(prefix2, file) = getSourceFilenamePartsFromPrefix(source_parts["prefix"], obj.key)
 		buckets = getTimeBuckets(file)
-		print(obj.key, buckets)
+
+		if s3_level == "10min":
+			rollup_file = "{}-{}-{}-{}-{}0".format(buckets["year"], buckets["month"], buckets["day"], buckets["hour"], buckets["10min"])
+
+		elif s3_level == "hour":
+			rollup_file = "{}-{}-{}-{}".format(buckets["year"], buckets["month"], buckets["day"], buckets["hour"])
+
+		elif s3_level == "day":
+			rollup_file = "{}-{}-{}".format(buckets["year"], buckets["month"], buckets["day"])
+
+		elif s3_level == "month":
+			rollup_file = "{}-{}".format(buckets["year"], buckets["month"])
+
+		if prefix2:
+			rollup_file = "{}/{}/{}".format(
+				dest_parts["prefix"], prefix2, rollup_file)
+		else:
+			rollup_file = "{}/{}".format(
+				dest_parts["prefix"], rollup_file)
+
+		if not rollup_file in rollup_files:
+			rollup_files[rollup_file] = []
+		rollup_files[rollup_file].append(obj.key)
+		
+
+	print(json.dumps(rollup_files, indent = 4, sort_keys = True))
 
 
