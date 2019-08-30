@@ -81,6 +81,21 @@ def getSourceFilenamePartsFromPrefix(prefix, file):
 
 
 #
+# Extract the bucket and object from a full S3 path
+#
+def parseS3Path(source):
+
+	retval = {}
+
+	results = re.search("^(s3://)?([^/]+)/(.*)", source)
+
+	retval["bucket"] = results.group(2)
+	retval["key"] = results.group(3)
+
+	return(retval)
+
+
+#
 # Extract the various time values from a file
 #
 def getTimeBuckets(file):
@@ -150,6 +165,19 @@ def getRollupFiles(s3_level, s3_source, source, dest):
 
 
 #
+# Read an S3 object and return the data
+#
+def readS3Object(s3, source):
+
+	parts = parseS3Path(source)
+	obj = s3.Object(bucket_name = parts["bucket"], key = parts["key"])
+	response = obj.get()
+	retval = response['Body'].read()
+
+	return(retval)
+
+
+#
 # Our main entry point.
 #
 def go(event, context):
@@ -175,13 +203,29 @@ def go(event, context):
 	logger.info("Source parts: {}".format(source_parts))
 	logger.info("Dest parts: {}".format(dest_parts))
 
-	s3 = boto3.resource('s3')
+	s3 = boto3.resource("s3")
 	s3_source = s3.Bucket(source_parts["bucket"])
 	s3_dest = s3.Bucket(dest_parts["bucket"])
 	
 	rollup_files = getRollupFiles(s3_level, s3_source, source_parts, dest_parts)
 
-	print(json.dumps(rollup_files, indent = 4, sort_keys = True))
+	for dest in rollup_files:
+
+		data = b""
+
+		for source in rollup_files[dest]:
+			results = readS3Object(s3, source)
+			data += results
+			logger.info("Read {} bytes from {}, now have {} bytes".format(
+				len(results), source, len(data)))
+
+		logger.info("Writing {} bytes to rollup {}...".format(
+			len(data), dest))
+
+		parts = parseS3Path(dest)
+		obj = s3.Object(bucket_name = parts["bucket"], key = parts["key"])
+		obj.put(Body = data)
+
 
 
 
