@@ -100,13 +100,18 @@ def getTimeBuckets(file):
 #
 # Turn our list of files into an array of what files get rolled up into what.
 #
-def getRollupFiles(s3_level, prefix, bucket, dest_prefix):
+def getRollupFiles(s3_level, s3_source, source, dest):
 
 	retval = {}
 
-	for obj in bucket.objects.filter(Prefix = prefix):
+	source_bucket = source["bucket"]
+	source_prefix = source["prefix"]
+	dest_bucket = dest["bucket"]
+	dest_prefix = dest["prefix"]
 
-		(prefix2, file) = getSourceFilenamePartsFromPrefix(prefix, obj.key)
+	for obj in s3_source.objects.filter(Prefix = source_prefix):
+
+		(prefix2, file) = getSourceFilenamePartsFromPrefix(source_prefix, obj.key)
 		buckets = getTimeBuckets(file)
 
 		if s3_level == "10min":
@@ -135,9 +140,11 @@ def getRollupFiles(s3_level, prefix, bucket, dest_prefix):
 			rollup_file = "{}/{}".format(
 				dest_prefix, rollup_file)
 
+		rollup_file = "{}/{}".format(dest_bucket, rollup_file)
+
 		if not rollup_file in retval:
 			retval[rollup_file] = []
-		retval[rollup_file].append(obj.key)
+		retval[rollup_file].append("{}/{}".format(source_bucket, obj.key))
 
 	return(retval)		
 
@@ -169,10 +176,10 @@ def go(event, context):
 	logger.info("Dest parts: {}".format(dest_parts))
 
 	s3 = boto3.resource('s3')
-	bucket = s3.Bucket(source_parts["bucket"])
+	s3_source = s3.Bucket(source_parts["bucket"])
+	s3_dest = s3.Bucket(dest_parts["bucket"])
 	
-	rollup_files = getRollupFiles(s3_level, source_parts["prefix"], 
-		bucket, dest_parts["prefix"])
+	rollup_files = getRollupFiles(s3_level, s3_source, source_parts, dest_parts)
 
 	print(json.dumps(rollup_files, indent = 4, sort_keys = True))
 
