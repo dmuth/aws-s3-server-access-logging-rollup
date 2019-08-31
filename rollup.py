@@ -191,19 +191,40 @@ def deleteS3Object(s3, source):
 #
 def go(event, context):
 
-
 	#
 	# Grab our arguments
 	#
 	s3_source = os.environ["source"]
 	s3_dest = os.environ["dest"]
 	s3_level = os.getenv("level", "10min")
-	logger.info("Source S3 bucket: {}".format(s3_source))
-	logger.info("Dest S3 bucket: {}".format(s3_dest))
-	logger.info("Consolidation level: {}".format(s3_level))
+	debug = {
+		"keep": os.getenv("debug_keep", False),
+		"dryrun": os.getenv("debug_dryrun", False),
+		"overwrite": os.getenv("debug_overwrite", False),
+		}
+
+	#
+	# Grab debug flags if present.
+	#
+	if type(event) is str:
+		fields = event.split(":")
+		logger.info("-d flags provided: {}".format(fields))
+
+		if "keep" in fields:
+			debug["keep"] = True
+		if "dryrun" in fields:
+			debug["dryrun"] = True
+		if "overwrite" in fields:
+			debug["overwrite"] = True
+
 
 	if s3_level not in ["10min", "hour", "day", "month"]:
 		raise Exception("Unknown S3 consolidation level: {}".format(s3_level))
+
+	logger.info("Source S3 bucket: {}".format(s3_source))
+	logger.info("Dest S3 bucket: {}".format(s3_dest))
+	logger.info("Consolidation level: {}".format(s3_level))
+	logger.info("Debug flags: {}".format(debug))
 
 	#
 	# Parse our buckets into name and prefix
@@ -228,17 +249,26 @@ def go(event, context):
 		# This is because multiple runs could catch new inputs
 		# that weren't present before.
 		#
-		try: 
-			data = readS3Object(s3, dest)
-			logger.info("Read {} bytes from pre-existing {}".format(
-				len(data), dest))
+		if not debug["overwrite"]:
+			try: 
+				data = readS3Object(s3, dest)
+				logger.info("Read {} bytes from pre-existing {}".format(
+					len(data), dest))
 
-		except Exception as e:
-			if e.operation_name != "GetObject":
-				raise(e)
-			logger.info(
-				"The dest {} appears not to exist, but that's fine, continuing!".format(
-				dest))
+			except Exception as e:
+				if e.operation_name != "GetObject":
+					raise(e)
+				logger.info(
+					"The dest {} appears not to exist, but that's fine, continuing!".format(
+					dest))
+
+		else:
+			#
+			# Overwrite mode is enabled, so remove the destination object.
+			#
+			logger.info("Debug: overwrite: Remove the dest S3 object {}".format(dest))
+			deleteS3Object(s3, dest)
+
 
 		#
 		# Read our input files and write them to the output
@@ -252,17 +282,24 @@ def go(event, context):
 		logger.info("Writing {} bytes to rollup {}...".format(
 			len(data), dest))
 
-		parts = parseS3Path(dest)
-		obj = s3.Object(bucket_name = parts["bucket"], key = parts["key"])
-		obj.put(Body = data)
+		if not debug["dryrun"]:
+			parts = parseS3Path(dest)
+			obj = s3.Object(bucket_name = parts["bucket"], key = parts["key"])
+			obj.put(Body = data)
+
+		else:
+			logger.info("Debug: dryrun: Don't write dest S3 object {}".format(dest))
 
 		#
 		# Now delete our input files
 		#
 		for source in rollup_files[dest]:
-			logger.info("Removing source file {}...".format(source))
-			deleteS3Object(s3, source)
+			if not debug["keep"]:
+				logger.info("Removing source file {}...".format(source))
+				deleteS3Object(s3, source)
 
+			else: 
+				logger.info("Debug: keep: Don't remove source S3 object {}".format(source))
 
 	logger.info("Done!")	
 
