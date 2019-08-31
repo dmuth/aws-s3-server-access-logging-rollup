@@ -178,9 +178,19 @@ def readS3Object(s3, source):
 
 
 #
+# Delete an S3 object
+#
+def deleteS3Object(s3, source):
+	parts = parseS3Path(source)
+	obj = s3.Object(bucket_name = parts["bucket"], key = parts["key"])
+	obj.delete()
+
+
+#
 # Our main entry point.
 #
 def go(event, context):
+
 
 	#
 	# Grab our arguments
@@ -213,6 +223,26 @@ def go(event, context):
 
 		data = b""
 
+		#
+		# If the output file already exists, read it in.
+		# This is because multiple runs could catch new inputs
+		# that weren't present before.
+		#
+		try: 
+			data = readS3Object(s3, dest)
+			logger.info("Read {} bytes from pre-existing {}".format(
+				len(data), dest))
+
+		except Exception as e:
+			if e.operation_name != "GetObject":
+				raise(e)
+			logger.info(
+				"The dest {} appears not to exist, but that's fine, continuing!".format(
+				dest))
+
+		#
+		# Read our input files and write them to the output
+		#
 		for source in rollup_files[dest]:
 			results = readS3Object(s3, source)
 			data += results
@@ -226,6 +256,13 @@ def go(event, context):
 		obj = s3.Object(bucket_name = parts["bucket"], key = parts["key"])
 		obj.put(Body = data)
 
+		#
+		# Now delete our input files
+		#
+		for source in rollup_files[dest]:
+			logger.info("Removing source file {}...".format(source))
+			deleteS3Object(s3, source)
 
 
+	logger.info("Done!")	
 
