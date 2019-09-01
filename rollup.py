@@ -219,6 +219,43 @@ def getRollupFiles(s3_level, s3, source, dest):
 
 
 #
+# Read the contents of our output file if it already exists.
+# This is because our default behavior is to appending our input
+# onto any existing output files.
+#
+def readOutput(debug, s3, dest):
+
+	data = b""
+
+	#
+	# If the output file already exists, read it in.
+	# This is because multiple runs could catch new inputs
+	# that weren't present before.
+	#
+	if not debug["overwrite"]:
+		try: 
+			data = readS3Object(s3, dest)
+			logger.info("Read {} bytes from pre-existing {}".format(
+				len(data), dest))
+
+		except Exception as e:
+			if e.operation_name != "GetObject":
+				raise(e)
+			logger.info(
+				"The dest {} appears not to exist, but that's fine, continuing!".format(
+				dest))
+
+	else:
+		#
+		# Overwrite mode is enabled, so remove the destination object.
+		#
+		logger.info("Debug: overwrite: Remove the dest S3 object {}".format(dest))
+		deleteS3Object(s3, dest)
+
+	return(data)
+
+
+#
 # Read an S3 object and return the data
 #
 def readS3Object(s3, source):
@@ -254,33 +291,10 @@ def go(event, context):
 
 	for dest in rollup_files:
 
-		data = b""
-
 		#
-		# If the output file already exists, read it in.
-		# This is because multiple runs could catch new inputs
-		# that weren't present before.
+		# Get any already-rolled up data.
 		#
-		if not debug["overwrite"]:
-			try: 
-				data = readS3Object(s3, dest)
-				logger.info("Read {} bytes from pre-existing {}".format(
-					len(data), dest))
-
-			except Exception as e:
-				if e.operation_name != "GetObject":
-					raise(e)
-				logger.info(
-					"The dest {} appears not to exist, but that's fine, continuing!".format(
-					dest))
-
-		else:
-			#
-			# Overwrite mode is enabled, so remove the destination object.
-			#
-			logger.info("Debug: overwrite: Remove the dest S3 object {}".format(dest))
-			deleteS3Object(s3, dest)
-
+		data = readOutput(debug, s3, dest)
 
 		#
 		# Read our input files and write them to the output
