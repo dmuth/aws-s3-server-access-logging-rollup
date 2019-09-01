@@ -277,6 +277,36 @@ def deleteS3Object(s3, source):
 	obj.delete()
 
 
+#
+# Read from our files to be rolled up, append them to any pre-existing
+# rolled up data, and (over)write the whole thing to the destination.
+#
+def rollup(debug, s3, rollup_files, dest, data):
+
+	#
+	# Read the contents of our input files.
+	#
+	for source in rollup_files:
+		results = readS3Object(s3, source)
+		data += results
+		logger.info("Read {} bytes from {}, now have {} bytes".format(
+			len(results), source, len(data)))
+
+	#
+	# Now write everything to our output file.
+	#
+	logger.info("Writing {} bytes to rollup {}...".format(
+		len(data), dest))
+
+	if not debug["dryrun"]:
+		parts = parseS3Path(dest)
+		obj = s3.Object(bucket_name = parts["bucket"], key = parts["key"])
+		obj.put(Body = data)
+
+	else:
+		logger.info("Debug: dryrun: Don't write dest S3 object {}".format(dest))
+
+
 
 #
 # Our main entry point.
@@ -296,25 +326,7 @@ def go(event, context):
 		#
 		data = readOutput(debug, s3, dest)
 
-		#
-		# Read our input files and write them to the output
-		#
-		for source in rollup_files[dest]:
-			results = readS3Object(s3, source)
-			data += results
-			logger.info("Read {} bytes from {}, now have {} bytes".format(
-				len(results), source, len(data)))
-
-		logger.info("Writing {} bytes to rollup {}...".format(
-			len(data), dest))
-
-		if not debug["dryrun"]:
-			parts = parseS3Path(dest)
-			obj = s3.Object(bucket_name = parts["bucket"], key = parts["key"])
-			obj.put(Body = data)
-
-		else:
-			logger.info("Debug: dryrun: Don't write dest S3 object {}".format(dest))
+		rollup(debug, s3, rollup_files[dest], dest, data)
 
 		#
 		# Now delete our input files
@@ -329,14 +341,3 @@ def go(event, context):
 
 	logger.info("Done!")	
 
-#
-# TODO:
-#
-# - Refactor this!
-# Turn s3_source, s3_dest, and s3_level into just source, dest, and level :-)
-# - Tear down all Cloudformation and rebuild
-# - Sample serverless.xml
-# - Test as an event!
-# - Write up docs: configuration, and testing/debugging
-# - Publish!
-#
