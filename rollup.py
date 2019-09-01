@@ -157,15 +157,27 @@ def getTimeBuckets(file):
 #
 # Turn our list of files into an array of what files get rolled up into what.
 #
-def getRollupFiles(s3_level, s3_source, source, dest):
+def getRollupFiles(s3_level, s3, source, dest):
 
 	retval = {}
 
-	source_bucket = source["bucket"]
-	source_prefix = source["prefix"]
-	dest_bucket = dest["bucket"]
-	dest_prefix = dest["prefix"]
+	#
+	# Parse our buckets into name and prefix
+	#
+	source_parts = getBucketParts(source)
+	dest_parts = getBucketParts(dest)
+	logger.info("Source parts: {}".format(source_parts))
+	logger.info("Dest parts: {}".format(dest_parts))
 
+	source_bucket = source_parts["bucket"]
+	source_prefix = source_parts["prefix"]
+	dest_bucket = dest_parts["bucket"]
+	dest_prefix = dest_parts["prefix"]
+
+	#
+	# Filter by our prefix on the source and get just those files.
+	#
+	s3_source = s3.Bucket(source_parts["bucket"])
 	for obj in s3_source.objects.filter(Prefix = source_prefix):
 
 		(prefix2, file) = getSourceFilenamePartsFromPrefix(source_prefix, obj.key)
@@ -236,19 +248,9 @@ def go(event, context):
 
 	(source, dest, level, debug) = parseArgs(event)
 
-	#
-	# Parse our buckets into name and prefix
-	#
-	source_parts = getBucketParts(source)
-	dest_parts = getBucketParts(dest)
-	logger.info("Source parts: {}".format(source_parts))
-	logger.info("Dest parts: {}".format(dest_parts))
-
 	s3 = boto3.resource("s3")
-	s3_source = s3.Bucket(source_parts["bucket"])
-	s3_dest = s3.Bucket(dest_parts["bucket"])
 	
-	rollup_files = getRollupFiles(level, s3_source, source_parts, dest_parts)
+	rollup_files = getRollupFiles(level, s3, source, dest)
 
 	for dest in rollup_files:
 
