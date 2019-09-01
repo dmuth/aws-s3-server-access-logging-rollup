@@ -25,6 +25,48 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 
+#
+# Go through our environment and any arguments and parse out our settings.
+#
+def parseArgs(event):
+
+	#
+	# Grab our arguments
+	#
+	source = os.environ["source"]
+	dest = os.environ["dest"]
+	level = os.getenv("level", "10min")
+	debug = {
+		"keep": os.getenv("debug_keep", False),
+		"dryrun": os.getenv("debug_dryrun", False),
+		"overwrite": os.getenv("debug_overwrite", False),
+		}
+
+	#
+	# Grab debug flags if passed in via -d in serverless.
+	#
+	if type(event) is str:
+		fields = event.split(":")
+		logger.info("-d flags provided: {}".format(fields))
+
+		if "keep" in fields:
+			debug["keep"] = True
+		if "dryrun" in fields:
+			debug["dryrun"] = True
+		if "overwrite" in fields:
+			debug["overwrite"] = True
+
+
+	if level not in ["10min", "hour", "day", "month"]:
+		raise Exception("Unknown S3 consolidation level: {}".format(level))
+
+	logger.info("Source S3 bucket: {}".format(source))
+	logger.info("Dest S3 bucket: {}".format(dest))
+	logger.info("Consolidation level: {}".format(level))
+	logger.info("Debug flags: {}".format(debug))
+
+	return(source, dest, level, debug)
+
 
 #
 # Grab the bucket name and prefix from our bucket
@@ -186,51 +228,19 @@ def deleteS3Object(s3, source):
 	obj.delete()
 
 
+
 #
 # Our main entry point.
 #
 def go(event, context):
 
-	#
-	# Grab our arguments
-	#
-	s3_source = os.environ["source"]
-	s3_dest = os.environ["dest"]
-	s3_level = os.getenv("level", "10min")
-	debug = {
-		"keep": os.getenv("debug_keep", False),
-		"dryrun": os.getenv("debug_dryrun", False),
-		"overwrite": os.getenv("debug_overwrite", False),
-		}
-
-	#
-	# Grab debug flags if present.
-	#
-	if type(event) is str:
-		fields = event.split(":")
-		logger.info("-d flags provided: {}".format(fields))
-
-		if "keep" in fields:
-			debug["keep"] = True
-		if "dryrun" in fields:
-			debug["dryrun"] = True
-		if "overwrite" in fields:
-			debug["overwrite"] = True
-
-
-	if s3_level not in ["10min", "hour", "day", "month"]:
-		raise Exception("Unknown S3 consolidation level: {}".format(s3_level))
-
-	logger.info("Source S3 bucket: {}".format(s3_source))
-	logger.info("Dest S3 bucket: {}".format(s3_dest))
-	logger.info("Consolidation level: {}".format(s3_level))
-	logger.info("Debug flags: {}".format(debug))
+	(source, dest, level, debug) = parseArgs(event)
 
 	#
 	# Parse our buckets into name and prefix
 	#
-	source_parts = getBucketParts(s3_source)
-	dest_parts = getBucketParts(s3_dest)
+	source_parts = getBucketParts(source)
+	dest_parts = getBucketParts(dest)
 	logger.info("Source parts: {}".format(source_parts))
 	logger.info("Dest parts: {}".format(dest_parts))
 
@@ -238,7 +248,7 @@ def go(event, context):
 	s3_source = s3.Bucket(source_parts["bucket"])
 	s3_dest = s3.Bucket(dest_parts["bucket"])
 	
-	rollup_files = getRollupFiles(s3_level, s3_source, source_parts, dest_parts)
+	rollup_files = getRollupFiles(level, s3_source, source_parts, dest_parts)
 
 	for dest in rollup_files:
 
@@ -303,3 +313,14 @@ def go(event, context):
 
 	logger.info("Done!")	
 
+#
+# TODO:
+#
+# - Refactor this!
+# Turn s3_source, s3_dest, and s3_level into just source, dest, and level :-)
+# - Tear down all Cloudformation and rebuild
+# - Sample serverless.xml
+# - Test as an event!
+# - Write up docs: configuration, and testing/debugging
+# - Publish!
+#
