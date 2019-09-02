@@ -26,3 +26,6 @@ var/
 node_modules/
 package-lock.json
 
+# Don't commit production data.
+serverless.yml
+
