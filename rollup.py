@@ -223,7 +223,7 @@ def getRollupFiles(s3_level, s3, source, dest):
 # This is because our default behavior is to appending our input
 # onto any existing output files.
 #
-def readOutput(debug, s3, dest):
+def readOutputFile(debug, s3, dest):
 
 	data = b""
 
@@ -307,6 +307,20 @@ def rollup(debug, s3, rollup_files, dest, data):
 		logger.info("Debug: dryrun: Don't write dest S3 object {}".format(dest))
 
 
+#
+# Delete our input files.
+#
+def deleteInputFiles(debug, s3, rollup_files):
+
+	for source in rollup_files:
+		if not debug["keep"]:
+			logger.info("Removing source file {}...".format(source))
+			deleteS3Object(s3, source)
+
+		else: 
+			logger.info("Debug: keep: Don't remove source S3 object {}".format(source))
+
+
 
 #
 # Our main entry point.
@@ -324,20 +338,19 @@ def go(event, context):
 		#
 		# Get any already-rolled up data.
 		#
-		data = readOutput(debug, s3, dest)
+		data = readOutputFile(debug, s3, dest)
 
+		#
+		# Add in the intput files and (re)write the output file
+		#
 		rollup(debug, s3, rollup_files[dest], dest, data)
 
 		#
-		# Now delete our input files
+		# We're all done, delete the input files!
 		#
-		for source in rollup_files[dest]:
-			if not debug["keep"]:
-				logger.info("Removing source file {}...".format(source))
-				deleteS3Object(s3, source)
-
-			else: 
-				logger.info("Debug: keep: Don't remove source S3 object {}".format(source))
+		deleteInputFiles(debug, s3, rollup_files[dest])
+		
 
 	logger.info("Done!")	
+
 
