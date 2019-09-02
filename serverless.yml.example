@@ -80,7 +80,8 @@ functions:
       #debug_keep: 1
 
       #
-      # Set to not write the rolled up logs in the destination.
+      # Set to not write the rolled up logs in the destination
+      # nor remove the original logfiles.
       #
       #debug_dryrun: 1
 
