@@ -43,10 +43,14 @@ If the script stops:
 
 - While reading source files
    - Nothing will be changed
-- While writing the destation file
-   - If there was previously data in the destination file, this presents a race condition where data may be list.  
-      - I need to come up with a way to address--perhaps by never removing the dest file but instead by writing a new dest file.  That's not perfect, but it will work.
+- While writing the destination file
+   - If the write to the destination file succeeds, it will overwrite what's there, if not, the original destination file will be untouched and the script will throw an exception, so nothing will be changed.
 - While removing the source files
    - If this happens, 1 or more source files may be re-rolled up on the next execution.  This will result in duplicate events in the rollups.  This however could be filtered out based the unique value that appears to be in each log entry.
+
+
+Care was taken when building this app to minimize the chance of data loss
+and instead err on the side of having duplicate data, which may be filtered out.
+
 
 
