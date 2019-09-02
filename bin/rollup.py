@@ -313,12 +313,13 @@ def rollup(debug, s3, rollup_files, dest, data):
 def deleteInputFiles(debug, s3, rollup_files):
 
 	for source in rollup_files:
-		if not debug["keep"]:
+
+		if not debug["keep"] and not debug["dryrun"]:
 			logger.info("Removing source file {}...".format(source))
 			deleteS3Object(s3, source)
 
 		else: 
-			logger.info("Debug: keep: Don't remove source S3 object {}".format(source))
+			logger.info("Debug: keep/dryrun: Don't remove source S3 object {}".format(source))
 
 
 
