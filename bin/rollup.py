@@ -160,6 +160,7 @@ def getTimeBuckets(file):
 def getRollupFiles(s3_level, s3, source, dest):
 
 	retval = {}
+	rollup_files = {}
 
 	#
 	# Parse our buckets into name and prefix
@@ -177,6 +178,7 @@ def getRollupFiles(s3_level, s3, source, dest):
 	#
 	# Filter by our prefix on the source and get just those files.
 	#
+	num_source_files = 0
 	s3_source = s3.Bucket(source_parts["bucket"])
 	for obj in s3_source.objects.filter(Prefix = source_prefix):
 
@@ -211,9 +213,16 @@ def getRollupFiles(s3_level, s3, source, dest):
 
 		rollup_file = "{}/{}".format(dest_bucket, rollup_file)
 
-		if not rollup_file in retval:
-			retval[rollup_file] = []
-		retval[rollup_file].append("{}/{}".format(source_bucket, obj.key))
+		if not rollup_file in rollup_files:
+			rollup_files[rollup_file] = []
+		rollup_files[rollup_file].append("{}/{}".format(source_bucket, obj.key))
+
+		num_source_files += 1
+
+	logger.info("Number of source files: {}".format(num_source_files))
+
+	retval["rollup_files"] = rollup_files
+	retval["num_source_files"] = num_source_files
 
 	return(retval)		
 
@@ -332,8 +341,11 @@ def go(event, context):
 
 	s3 = boto3.resource("s3")
 	
-	rollup_files = getRollupFiles(level, s3, source, dest)
-
+	rollup_file_data = getRollupFiles(level, s3, source, dest)
+	rollup_files = rollup_file_data["rollup_files"]
+	num_source_files = rollup_file_data["num_source_files"]
+	num_rollup_files = len(rollup_files)
+	
 	for dest in rollup_files:
 
 		#
@@ -351,6 +363,8 @@ def go(event, context):
 		#
 		deleteInputFiles(debug, s3, rollup_files[dest])
 		
+	logger.info("Num source files removed: {}, Num rollup files updated: {}".format(
+		num_source_files, num_rollup_files))
 
 	logger.info("Done!")	
 
