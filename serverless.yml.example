@@ -1,0 +1,108 @@
+
+service: aws-s3-server-access-log-consolidation
+
+custom:
+
+  #
+  # Our source bucket and path to read from
+  # Path can be /
+  #
+  source:
+    bucket: SOURCE_BUCKET
+    path: PATH
+
+  #
+  # Our destination bucket and path to write rolled up logs to.
+  # This can be the same as the source bucket but with a different path.
+  # For example, if you keep your logs in /logs, rollups could be written in /rollups.
+  #
+  dest:
+    bucket: DEST_BUCKET
+    path: PATH
+
+  #
+  # This can vary, but the recommendation is an hour, because the first
+  # run can take quite a bit of time.  If the run fails to complete, future
+  # runs will pick up where the first run left off.
+  #
+  rate: "rate(1 hour)"
+
+
+provider:
+  name: aws
+  runtime: python3.6
+
+  #
+  # Set the timeout to 10 minutes as this is single threaded and
+  # some executions can take quite long early on.
+  #
+  timeout: 600
+
+  iamRoleStatements:
+
+    - Effect: Allow
+      Action:
+        - s3:ListBucket
+      Resource: 
+        - "arn:aws:s3:::${self:custom.source.bucket}"
+        - "arn:aws:s3:::${self:custom.dest.bucket}"
+
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+        - s3:DeleteObject
+      Resource: 
+        - "arn:aws:s3:::${self:custom.source.bucket}/*"
+        - "arn:aws:s3:::${self:custom.dest.bucket}/*"
+
+
+package:
+  exclude:
+    - ./test-files/**
+    - ./node_modules/**
+
+
+functions:
+
+  rollup:
+    handler: bin/rollup.go
+    events:
+      - schedule: ${self:custom.rate}
+
+    environment:
+      source: ${self:custom.source.bucket}/${self:custom.source.path}
+      dest: ${self:custom.dest.bucket}/${self:custom.dest.path}
+
+      #
+      # Set to keep the original logfiles for testing.
+      #
+      #debug_keep: 1
+
+      #
+      # Set to not write the rolled up logs in the destination.
+      #
+      #debug_dryrun: 1
+
+      #
+      # Set to overwrite the rolled up logs in the destination.
+      # (Default is to append to rollup files because if, for example,
+      # we're rolling up by day, the rollup function will be
+      # called multiple times that day)
+      #
+      #debug_overwrite: 1
+
+      #
+      # The level to roll up logs.  I recommend starting with daily
+      # rollups.  If memory becomes an issue, then more frequent rollup
+      # intervals will have to be used.  Monthly rollups could be used
+      # used for buckets with very few logs.
+      #
+      #level: 10min
+      #level: hour
+      level: day
+      #level: month
+
+
+
+
