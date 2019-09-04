@@ -12,6 +12,10 @@ may not complete in 10 minutes.  In that case, either increasing the rate to
 `1 hour` and/or decreasing the level to `hour` or even `10min`  is recommended 
 until the backlog of logs to be rolled up is cleared out.
 
+Alternatively, instead of immediately deploying, serverless could be run in local
+mode as described below, so that progress can be observed directly, and more time
+be given for initial rollups to take place.
+
 
 ### Deployment recommendations
 
