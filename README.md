@@ -6,6 +6,12 @@
 - Edit `serverless.yml` to include your source and destination buckets and paths
 - Deploy the app with `sls deploy`
 
+Once deployed, the default is that the script will run every 10 minutes.
+In certain circumstances (such as if you have over 10,000 files), the script
+may not complete in 10 minutes.  In that case, either increasing the rate to 
+`1 hour` and/or decreasing the level to `hour` or even `10min`  is recommended 
+until the backlog of logs to be rolled up is cleared out.
+
 
 ### Deployment recommendations
 
@@ -28,6 +34,24 @@ Enable the debug flags `keep` and `dryrun` and then test locally.
 ### Run in the foreground with logging enabled to see the output:
 
 - `serverless invoke -f rollup -l`
+
+
+### Get the logging destinations for all current buckets
+
+This can be pasted in on the command line to get a list of all S3
+buckets that your current AWS credentials have access to, and
+where they send their logs:
+
+```
+for BUCKET in $(aws s3 ls | awk '{print $3}' )
+do 
+	echo -n "$BUCKET: "
+	aws s3api get-bucket-logging --bucket $BUCKET \
+		| jq -r '.LoggingEnabled | "s3://" + "\(.TargetBucket)" + "/" + "\(.TargetPrefix)" ' \
+		| tr -d '\n'
+	echo
+done
+```
 
 
 ## Troubleshooting
