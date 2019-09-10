@@ -57,6 +57,12 @@ do
 done
 ```
 
+### Set logging policy for 1 or more buckets
+
+Instructions are at: <a href="https://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-logging.html">https://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-logging.html</a>
+
+It's only recommend going through that if you have dozens or buckets or more.  Otherwise, the S3 UI is generally sufficient.
+
 
 ## Troubleshooting
 
