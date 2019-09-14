@@ -1,9 +1,40 @@
 
+# AWS S3 Server Access Logging Rollup
+
+AWS S3 logging is great for keeping track of accesses to your S3 buckets, but
+it is *notorious* for just spamming your target bucket with many small files
+many times per minute:
+
+```
+2019-09-14 13:26:38        835 s3/www.pa-furry.org/2019-09-14-17-26-37-5B75705EA0D67AF7
+2019-09-14 13:26:46        333 s3/www.pa-furry.org/2019-09-14-17-26-45-C8553CA61B663D7A
+2019-09-14 13:26:55        333 s3/www.pa-furry.org/2019-09-14-17-26-54-F613777CE621F257
+2019-09-14 13:26:56        333 s3/www.pa-furry.org/2019-09-14-17-26-55-99D355F57F3FABA9
+2019-09-14 13:27:06       1013 s3/www.pa-furry.org/2019-09-14-17-27-05-35FDE41D8D27DE13
+2019-09-14 13:27:06        333 s3/www.pa-furry.org/2019-09-14-17-27-05-ECC1ECDB7FA3D2E3
+2019-09-14 13:27:21        333 s3/www.pa-furry.org/2019-09-14-17-27-20-995D36CE306B33BD
+2019-09-14 13:27:28       1386 s3/www.pa-furry.org/2019-09-14-17-27-27-18AE0DD17C532746
+2019-09-14 13:27:31        333 s3/www.pa-furry.org/2019-09-14-17-27-30-DDF41B2D86C1DD77
+```
+
+This app instead lets you perform rollup on monthly, daily, hourly, or 10 minute
+intervals so that you have far fewer files:
+
+```
+2019-09-10 20:02:56    3930277 rollup-day/www.pa-furry.org/2019-09-10
+2019-09-11 20:02:56    4304119 rollup-day/www.pa-furry.org/2019-09-11
+2019-09-12 20:02:56    3991237 rollup-day/www.pa-furry.org/2019-09-12
+```
+
+The is written in Python, and deployed as a Lambda function that will run every
+10 minutes by default.  Deployment is done with <a href="https://serverless.com/">Serverless</a>.
+
 
 ## Setup and Deployment
 
 - Copy `serverless.yml.example` to `serverless.yml`
 - Edit `serverless.yml` to include your source and destination buckets and paths
+- Install Serverless: `npm install -g serverless`
 - Deploy the app with `sls deploy`
 
 Once deployed, the default is that the script will run every 10 minutes.
