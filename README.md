@@ -118,4 +118,14 @@ Care was taken when building this app to minimize the chance of data loss
 and instead err on the side of having duplicate data, which may be filtered out.
 
 
+## Bugs/Contact
+
+Here's how to get in touch with me:
+
+- <a href="http://twitter.com/dmuth">Twitter</a>
+- <a href="http://facebook.com/dmuth">Facebook</a>
+- <a href="http://www.dmuth.org/">Blog</a>
+- <a href="mailto:doug.muth@gmail.com">Email</a>
+
+
 
