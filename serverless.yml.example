@@ -26,6 +26,7 @@ custom:
   # runs will pick up where the first run left off.
   #
   rate: "rate(1 hour)"
+  #rate: "rate(10 minutes)"
 
 
 provider:
