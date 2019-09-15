@@ -1,4 +1,10 @@
 # :set tabstop=4 softtabstop=4 noexpandtab
+#
+# This script performs rollup of AWS S3 Logs.
+#
+# The project can be found on the web at:
+# https://github.com/dmuth/aws-s3-server-access-logging-rollup
+#
 
 import json
 import logging.config
