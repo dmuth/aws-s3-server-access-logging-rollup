@@ -53,6 +53,15 @@ be given for initial rollups to take place.
 Enable the debug flags `keep` and `dryrun` and then test locally.
 
 
+## Next Steps
+
+Once you have rollup working, you might want to consider performing analytics 
+on those logs so you can see what the top objects are, who the top requesters
+are, etc.  For this, I built an app called 
+<a href="https://github.com/dmuth/splunk-aws-s3-server-accesslogs">Splunk for AWS S3 Server Access Logs</a>.  Check it out!
+
+
+
 ## Testing and debugging
 
 ### Run locally with all debug functions set
