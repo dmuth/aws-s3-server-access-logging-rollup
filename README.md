@@ -60,6 +60,8 @@ on those logs so you can see what the top objects are, who the top requesters
 are, etc.  For this, I built an app called 
 <a href="https://github.com/dmuth/splunk-aws-s3-server-accesslogs">Splunk for AWS S3 Server Access Logs</a>.  Check it out!
 
+<a href="img/aws-s3-bucket-report.png"><img src="img/aws-s3-bucket-report.png" width="350" /></a>
+<a href="img/top-bucket-objects.png"><img src="img/top-bucket-objects.png" width="350" /></a>
 
 
 ## Testing and debugging
