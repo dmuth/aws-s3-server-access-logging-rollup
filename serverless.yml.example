@@ -9,7 +9,9 @@ custom:
   #
   source:
     bucket: SOURCE_BUCKET
+    #bucket: dmuth-accesslogs
     path: PATH
+    #path: s3
 
   #
   # Our destination bucket and path to write rolled up logs to.
@@ -18,7 +20,9 @@ custom:
   #
   dest:
     bucket: DEST_BUCKET
+    #bucket: dmuth-accesslogs
     path: PATH
+    #path: rollup-day
 
   #
   # This can vary, but the recommendation is an hour, because the first
