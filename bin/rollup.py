@@ -151,6 +151,13 @@ def getTimeBuckets(file):
 	retval = {}
 
 	results = re.search("([0-9]{4})-([0-9]{2})-([0-9]{2})-([0-9]{2})-([0-9])", file)
+	#
+	# Cloudfront logs are written with a different filename format that doesn't include 
+	# the minute and are also Gzipped.  For now I'm gonna skip those.  I may come back to them later.
+	#
+	if not results:
+		return(retval)
+
 	retval["year"] = results.group(1)
 	retval["month"] = results.group(2)
 	retval["day"] = results.group(3)
@@ -190,6 +197,9 @@ def getRollupFiles(s3_level, s3, source, dest):
 
 		(prefix2, file) = getSourceFilenamePartsFromPrefix(source_prefix, obj.key)
 		buckets = getTimeBuckets(file)
+		if not buckets:
+			print("Could not extract filename parts from file {}".format(file))
+			continue
 
 		if s3_level == "10min":
 			rollup_file = "{}-{}-{}-{}-{}0".format(
